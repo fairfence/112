@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FairFence API Configuration Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .test-section {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .test-button:hover {
+            background: #005a87;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 FairFence API Configuration Test</h1>
+        
+        <p>This page tests the WordPress plugin's API configuration system. It demonstrates how the frontend application will retrieve configuration from the WordPress backend.</p>
+        
+        <div class="test-section">
+            <h2>1. Test Public Configuration Endpoint</h2>
+            <p>This endpoint returns only public configuration (URLs, public keys) that the frontend needs.</p>
+            <button class="test-button" onclick="testPublicConfig()">
+                Fetch Public Configuration
+            </button>
+            <div id="public-config-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. Initialize Supabase Client</h2>
+            <p>Using the configuration from WordPress to initialize a Supabase client.</p>
+            <button class="test-button" onclick="testSupabaseInit()">
+                Initialize Supabase
+            </button>
+            <div id="supabase-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. Test Admin Configuration (Requires Authentication)</h2>
+            <p>This endpoint returns masked sensitive values for admin users only.</p>
+            <button class="test-button" onclick="testAdminConfig()">
+                Fetch Admin Configuration
+            </button>
+            <div id="admin-config-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Base URL for WordPress REST API
+        const API_BASE = '/wp-json/fairfence/v1';
+        
+        // Test public configuration endpoint
+        async function testPublicConfig() {
+            const resultDiv = document.getElementById('public-config-result');
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Fetching public configuration...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/config`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = 'Success! Public configuration received:\n\n' + 
+                                          JSON.stringify(data, null, 2);
+                    
+                    // Store for use in other tests
+                    window.fairfenceConfig = data;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = 'Error: ' + (data.message || 'Failed to fetch configuration');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Network error: ' + error.message;
+            }
+        }
+        
+        // Test Supabase initialization with config
+        async function testSupabaseInit() {
+            const resultDiv = document.getElementById('supabase-result');
+            
+            if (!window.fairfenceConfig) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Please fetch public configuration first!';
+                return;
+            }
+            
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Initializing Supabase client...';
+            
+            try {
+                const config = window.fairfenceConfig;
+                
+                if (!config.api.supabase_url || !config.api.supabase_anon_key) {
+                    resultDiv.className = 'result info';
+                    resultDiv.textContent = 'Supabase configuration not set.\n\n' +
+                                          'Please configure Supabase in WordPress admin:\n' +
+                                          '1. Go to WordPress Admin > FairFence > API Configuration\n' +
+                                          '2. Enter your Supabase URL and keys\n' +
+                                          '3. Save settings';
+                    return;
+                }
+                
+                // Example of how the frontend would initialize Supabase
+                const supabaseConfig = {
+                    url: config.api.supabase_url,
+                    anonKey: config.api.supabase_anon_key,
+                    // Note: Service key is NOT included (server-side only)
+                };
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = 'Supabase client configuration ready!\n\n' +
+                                      'Configuration:\n' +
+                                      JSON.stringify(supabaseConfig, null, 2) + '\n\n' +
+                                      'Note: Service Role Key is kept server-side only for security.';
+                
+                // In a real app, you would initialize Supabase here:
+                // const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Error initializing Supabase: ' + error.message;
+            }
+        }
+        
+        // Test admin configuration endpoint
+        async function testAdminConfig() {
+            const resultDiv = document.getElementById('admin-config-result');
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Fetching admin configuration...';
+            
+            try {
+                // Note: This requires admin authentication
+                const response = await fetch(`${API_BASE}/api-config`, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-WP-Nonce': window.wpApiSettings?.nonce || ''
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = 'Admin configuration (masked values):\n\n' + 
+                                          JSON.stringify(data, null, 2) + '\n\n' +
+                                          'Note: Sensitive values are masked for security.';
+                } else if (response.status === 401 || response.status === 403) {
+                    resultDiv.className = 'result info';
+                    resultDiv.textContent = 'Authentication required.\n\n' +
+                                          'This endpoint requires WordPress admin privileges.\n' +
+                                          'Please log in to WordPress admin first.';
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = 'Error: ' + (data.message || 'Failed to fetch admin configuration');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Network error: ' + error.message;
+            }
+        }
+        
+        // Auto-run public config test on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('FairFence API Configuration Test Page Loaded');
+            console.log('API Endpoint:', API_BASE);
+        });
+    </script>
+</body>
+</html>
