@@ -20,7 +20,7 @@ export default function Services({ className }: ServicesProps) {
       icon: <Hammer className="h-6 w-6" />,
       title: "Quality Timber Fencing",
       description: "Classic wooden fences perfect for Kiwi homes. Paling, panel, and picket styles available with quality H3.2 treated timber.",
-      features: ["Residential paling", "Privacy screens", "Custom gates", "25-year posts"],
+      features: ["Residential paling", "Privacy screens", "Custom gates"],
       priceRange: "From $180/m",
       image: timberServiceImage,
       gradient: "from-amber-900/40 to-orange-900/40"
@@ -40,7 +40,7 @@ export default function Services({ className }: ServicesProps) {
       icon: <Sparkles className="h-6 w-6" />,
       title: "Low-Maintenance Vinyl",
       description: "Premium PVC/vinyl fencing that never needs painting or staining. Perfect for busy homeowners wanting lasting beauty.",
-      features: ["Zero maintenance", "UV resistant", "25-year warranty", "Wind rated"],
+      features: ["Zero maintenance", "UV resistant",  "Wind rated"],
       priceRange: "From $250/m",
       image: vinylServiceImage,
       gradient: "from-blue-900/40 to-indigo-900/40"
