@@ -265,7 +265,7 @@ export default function ProcessTimeline() {
             <CardContent className="p-8">
               <h3 className="text-2xl font-bold mb-3">Ready to Start Your Project?</h3>
               <p className="text-muted-foreground mb-6">
-                Most fences are completed within a week from approval. Get your free quote today!
+                Most fences are completed within a 2-3 weeks from approval. Get your free quote today!
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a 
