@@ -1,22 +1,36 @@
 // SendGrid API email service
 import { MailService } from '@sendgrid/mail';
 
-if (!process.env.SENDGRID_API_KEY) {
-  throw new Error("SENDGRID_API_KEY environment variable must be set");
-}
+// Check if SendGrid is configured
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const EMAIL_SERVICE_ENABLED = !!SENDGRID_API_KEY;
 
 // Configuration variables
 const SENDGRID_FROM = process.env.SENDGRID_FROM || 'admin@fairfencecontracting.co.nz';
 const SENDGRID_TO = process.env.SENDGRID_TO || 'admin@fairfencecontracting.co.nz';
 const SENDGRID_SANDBOX = process.env.SENDGRID_SANDBOX === 'true';
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 
-// Warn if using default from address
-if (!process.env.SENDGRID_FROM) {
-  console.warn('⚠️  SENDGRID_FROM not set, using default. Please verify this sender identity in SendGrid.');
+// Initialize mail service only if API key is available
+let mailService: MailService | null = null;
+
+if (!EMAIL_SERVICE_ENABLED) {
+  console.warn('⚠️  SENDGRID_API_KEY not set - Email functionality will be disabled');
+  console.warn('⚠️  Emails will be logged to console only');
+} else {
+  mailService = new MailService();
+  mailService.setApiKey(SENDGRID_API_KEY);
+  console.log('✅ SendGrid email service initialized');
+
+  // Warn if using default from address
+  if (!process.env.SENDGRID_FROM) {
+    console.warn('⚠️  SENDGRID_FROM not set, using default: ' + SENDGRID_FROM);
+  }
+
+  if (SENDGRID_SANDBOX) {
+    console.log('📧 SendGrid sandbox mode enabled - emails will not be actually sent');
+  }
 }
-
-const mailService = new MailService();
-mailService.setApiKey(process.env.SENDGRID_API_KEY);
 
 interface EmailParams {
   to: string;
@@ -28,6 +42,18 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
+  // If email service is not enabled, log the email and return false
+  if (!EMAIL_SERVICE_ENABLED || !mailService) {
+    console.log('📧 Email service disabled - Email would have been sent:');
+    console.log('  To:', params.to);
+    console.log('  From:', params.from);
+    console.log('  Subject:', params.subject);
+    if (IS_DEVELOPMENT) {
+      console.log('  Text:', params.text?.substring(0, 200) + '...');
+    }
+    return false;
+  }
+
   try {
     const emailData: any = {
       to: params.to,
@@ -35,24 +61,24 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       subject: params.subject,
       ...(SENDGRID_SANDBOX && { mailSettings: { sandboxMode: { enable: true } } }),
     };
-    
+
     if (params.text) {
       emailData.text = params.text;
     }
-    
+
     if (params.html) {
       emailData.html = params.html;
     }
-    
+
     if (params.replyTo) {
       emailData.replyTo = params.replyTo;
     }
-    
+
     await mailService.send(emailData);
-    console.log(`Email sent successfully to ${params.to}`);
+    console.log(`✅ Email sent successfully to ${params.to}`);
     return true;
   } catch (error: any) {
-    console.error('SendGrid API email error:', {
+    console.error('❌ SendGrid API email error:', {
       message: error.message,
       code: error.code,
       response: error.response,
@@ -61,6 +87,17 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     });
     return false;
   }
+}
+
+// Export email service status for monitoring
+export function getEmailServiceStatus() {
+  return {
+    enabled: EMAIL_SERVICE_ENABLED,
+    configured: !!SENDGRID_API_KEY,
+    sandboxMode: SENDGRID_SANDBOX,
+    fromAddress: SENDGRID_FROM,
+    toAddress: SENDGRID_TO,
+  };
 }
 
 // Function to send contact form notification email

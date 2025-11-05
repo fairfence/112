@@ -12,7 +12,7 @@ import {
   supabaseAdmin
 } from "./db";
 import configManager, { getConfigStatus } from "./config";
-import { sendContactFormEmail, sendEmail, sendSiteSurveyEmail } from "./email";
+import { sendContactFormEmail, sendEmail, sendSiteSurveyEmail, getEmailServiceStatus } from "./email";
 import { insertQuoteSchema, type InsertQuote } from "@shared/schema";
 import { createStorageAsync, type IDatabaseStorage } from "./storage";
 
@@ -92,13 +92,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add a simple status endpoint to check service health
   app.get('/api/status', async (req, res) => {
     try {
-      const status = {
+      const status: any = {
         server: 'running',
         timestamp: new Date().toISOString(),
         database: 'checking...',
-        config: 'checking...'
+        config: 'checking...',
+        email: 'checking...'
       };
-      
+
       // Quick database check
       try {
         await testDatabaseConnection();
@@ -106,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (dbError) {
         status.database = 'error';
       }
-      
+
       // Quick config check
       try {
         const configStatus = getConfigStatus();
@@ -114,12 +115,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (configError) {
         status.config = 'error';
       }
-      
+
+      // Email service check
+      try {
+        const emailStatus = getEmailServiceStatus();
+        status.email = emailStatus.enabled ? 'enabled' : 'disabled';
+        status.emailDetails = emailStatus;
+      } catch (emailError) {
+        status.email = 'error';
+      }
+
       res.json({ success: true, status });
     } catch (error) {
       console.error('Status check error:', error);
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: 'Status check failed',
         timestamp: new Date().toISOString()
       });
